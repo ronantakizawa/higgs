@@ -53,6 +53,7 @@ gc.collect()
 model = AutoAWQForCausalLM.from_pretrained(
     MODEL_PATH,
     device_map={"": 0},  # Force ALL layers on GPU 0 (no offloading)
+    torch_dtype=torch.float16,  # Force FP16 to materialize tensors properly
     low_cpu_mem_usage=True,
     use_cache=False,
     cache_dir="/workspace/.cache/huggingface"
