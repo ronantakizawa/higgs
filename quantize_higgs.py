@@ -52,11 +52,10 @@ gc.collect()
 
 model = AutoAWQForCausalLM.from_pretrained(
     MODEL_PATH,
-    device_map="auto",  # Changed from cuda:0 for better memory management
+    device_map={"": 0},  # Force ALL layers on GPU 0 (no offloading)
     low_cpu_mem_usage=True,
     use_cache=False,
-    cache_dir="/workspace/.cache/huggingface",
-    max_memory={0: "175GB"}  # Force memory limit to prevent OOM
+    cache_dir="/workspace/.cache/huggingface"
 )
 
 tokenizer = AutoTokenizer.from_pretrained(
