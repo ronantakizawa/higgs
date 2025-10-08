@@ -10,6 +10,10 @@ import os
 import gc
 import time
 import torch
+
+# Set memory optimization before importing anything else
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
+
 from awq import AutoAWQForCausalLM
 from transformers import AutoTokenizer
 from datasets import load_dataset
@@ -41,12 +45,18 @@ print("="*70)
 
 start_time = time.time()
 
+# Clear GPU memory before loading
+if torch.cuda.is_available():
+    torch.cuda.empty_cache()
+gc.collect()
+
 model = AutoAWQForCausalLM.from_pretrained(
     MODEL_PATH,
-    device_map="cuda:0",
+    device_map="auto",  # Changed from cuda:0 for better memory management
     low_cpu_mem_usage=True,
     use_cache=False,
-    cache_dir="/workspace/.cache/huggingface"
+    cache_dir="/workspace/.cache/huggingface",
+    max_memory={0: "175GB"}  # Force memory limit to prevent OOM
 )
 
 tokenizer = AutoTokenizer.from_pretrained(
