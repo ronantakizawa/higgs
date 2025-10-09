@@ -67,31 +67,8 @@ def load_model(model_id, is_quantized=False):
 
     return model, tokenizer
 
-# Load models
-print("="*70)
-print("📥 LOADING MODELS")
-print("="*70)
-
-models = {}
-
-if COMPARE_BASELINE:
-    baseline_model, baseline_tokenizer = load_model(BASELINE_MODEL_ID, is_quantized=False)
-    models['baseline'] = {
-        'model': baseline_model,
-        'tokenizer': baseline_tokenizer,
-        'name': 'Baseline (FP16)',
-        'memory': torch.cuda.memory_allocated() / 1024**3 if torch.cuda.is_available() else 0
-    }
-
-quantized_model, quantized_tokenizer = load_model(QUANTIZED_MODEL_ID, is_quantized=True)
-models['quantized'] = {
-    'model': quantized_model,
-    'tokenizer': quantized_tokenizer,
-    'name': 'Quantized (AWQ 4-bit)',
-    'memory': torch.cuda.memory_allocated() / 1024**3 if torch.cuda.is_available() else 0
-}
-
-device = next(quantized_model.parameters()).device
+# Note: We'll load models one at a time to avoid memory issues
+# Models will be loaded in the evaluation loop below
 
 # Function to run generation tests
 def run_generation_tests(model, tokenizer, model_name):
@@ -369,14 +346,23 @@ wikitext = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
 wikitext_texts = [sample['text'] for sample in wikitext if len(sample['text'].strip()) > 100]
 print(f"✅ Loaded {len(wikitext_texts)} test samples")
 
-for model_key, model_info in models.items():
-    model_name = model_info['name']
-    model = model_info['model']
-    tokenizer = model_info['tokenizer']
+# Evaluate models sequentially (one at a time to avoid memory issues)
+models_to_eval = []
+if COMPARE_BASELINE:
+    models_to_eval.append(('baseline', BASELINE_MODEL_ID, False, 'Baseline (FP16)'))
+models_to_eval.append(('quantized', QUANTIZED_MODEL_ID, True, 'Quantized (AWQ 4-bit)'))
 
+for model_key, model_id, is_quantized, model_name in models_to_eval:
     print(f"\n{'='*70}")
-    print(f"🔍 EVALUATING: {model_name}")
+    print(f"📥 LOADING & EVALUATING: {model_name}")
     print('='*70)
+
+    # Load model
+    model, tokenizer = load_model(model_id, is_quantized=is_quantized)
+
+    # Capture memory AFTER loading (before running tests)
+    memory_gb = torch.cuda.memory_allocated() / 1024**3 if torch.cuda.is_available() else 0
+    print(f"📊 GPU Memory after loading: {memory_gb:.2f} GB")
 
     # Run tests
     gen_results = run_generation_tests(model, tokenizer, model_name)
@@ -385,17 +371,23 @@ for model_key, model_info in models.items():
 
     all_results[model_key] = {
         'name': model_name,
-        'memory_gb': model_info['memory'],
+        'memory_gb': memory_gb,  # Use captured memory from after loading
         'generation': gen_results,
         'perplexity': ppl_results,
         'performance': perf_results
     }
 
-    # Clear GPU cache between models
+    # Clear GPU cache before loading next model
+    print(f"\n🧹 Clearing GPU memory...")
     del model
+    del tokenizer
     gc.collect()
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
+        torch.cuda.synchronize()
+
+    freed_memory = torch.cuda.memory_allocated() / 1024**3 if torch.cuda.is_available() else 0
+    print(f"   GPU Memory after cleanup: {freed_memory:.2f} GB")
 
 # Comparison Summary
 print(f"\n{'='*70}")
