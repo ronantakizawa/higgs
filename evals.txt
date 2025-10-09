@@ -1,0 +1,28 @@
+> Create an updated model card md file with this info: 📊 EVALUATION SUMMARY
+======================================================================
+
+🎯 Generation Tests:
+   • Overall Accuracy: 10/12 (83%)
+   • Average Latency: 52.66s
+
+📈 Per-Category Results:
+   • General Knowledge: 100% accuracy, 51.74s avg
+   • Reasoning: 100% accuracy, 55.86s avg
+   • Code Generation: 100% accuracy, 51.52s avg
+   • Creative Writing: 50% accuracy, 51.17s avg
+   • Mathematics: 50% accuracy, 51.85s avg
+
+📐 Perplexity:
+   • Score: 6.1876
+   • Quality: EXCELLENT
+
+⚡ Performance:
+   • Average Throughput: 6.03 tokens/sec
+   • Average Latency: 52.66s per generation
+
+💾 GPU Memory:
+   • Allocated: 37.04 GB
+   • Original Model: ~140 GB
+   • Memory Saved: ~103.0 GB (73.5%)
+
+💾 Results saved to: evaluation_results.json 
